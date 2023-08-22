@@ -1,0 +1,169 @@
+---
+title: "African Language Sentiment"
+author: "Rahim Jutha"
+date: "2023-03-02"
+output: html_document
+---
+
+Is making the plot about regions or countries sentiment appropriate for this data?
+I think the plot should be about the sentiment of each language to hopefully show the possible nuances of the different languages.
+
+# Load Packages
+
+This code loads several packages that are useful for data visualization, text analysis, and data manipulation. The tidyverse package provides functions for data manipulation, wrangling, and visualization. ggforce and ggsci provide functions for creating aesthetically pleasing, attractive visualizations. The glue package allows for combining strings, template strings, and other data types in order to generate strings. ggtext allows for formatting of text and labels in visualizations. The forcats package provides tools for working with factors and forcats objects. The showtext package provides support for system fonts and font management. The tidytext package provides tools for text analysis and manipulation. The magrittr package provides pipes and functions for manipulating data.
+
+```{r}
+library(tidyverse)
+library(ggforce)
+library(ggsci)
+library(glue)
+library(ggtext)
+library(forcats)
+library(showtext)
+library(tidytext)
+library(magrittr)
+```
+
+# Load Data
+```{r, message=FALSE}
+afrisenti <- read_csv("data/afrisenti.csv")
+country_regions <- read_csv("data/country_regions.csv")
+language_countries <- read_csv("data/language_countries.csv")
+language_scripts <- read_csv("data/language_scripts.csv")
+languages <- read_csv("data/languages.csv")
+```
+
+# Load Font
+
+This code adds the "Roboto Condensed" font to R, which can be used for plotting and other text in R. showtext_auto() enables the use of custom fonts, while showtext_opts() sets the dpi (dots per inch) at 300. This code is useful if you want to use a non-standard font in R.
+
+```{r}
+font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
+showtext_auto()
+showtext_opts(dpi = 300)
+```
+
+# Data Wrangling
+
+This code takes two data frames and performs several operations in order to filter and join data. The first data frame, language_countries, is joined with country_regions by the "country" column. The join is filtered to remove Mozambique when from the Southern Africa and East Africa regions. The language_iso_code column is then grouped, and a countries column is created to store all countries within each language_iso_code. 
+
+This data is then joined with the afrisenti data frame, and several columns are filtered. The language_iso_code and label columns are grouped, and the total column is created, which stores the number of labels for each language_iso_code. The languages and country_info data frames are then joined to the data frame. Finally, the lang_country and label columns are converted to factors.
+
+Lastly the factor_levels data frame is made and used to change the factor levels of lang_country to change the order of the plot made afterwards.
+
+```{r}
+country_info <-
+  language_countries %>%
+  left_join(country_regions, by = "country") %>%
+  filter(
+    !(country == "Mozambique" & region %in% c("Southern Africa", "East Africa"))
+  ) %>%
+  group_by(language_iso_code) %>%
+  mutate(countries = paste0(country, collapse = " ")) %>%
+  select(-country) %>%
+  distinct() %>%
+  filter(
+    !((language_iso_code %in% c("swa", "tso", "pt-MZ")) &
+    (region %in% c("Southern Africa", "East Africa")))
+  ) %>%
+  mutate(region = case_when(
+    region == "Northern Africa" ~ "North Africa",
+    TRUE ~ region
+  ))
+  
+df <-
+  afrisenti %>%
+  group_by(language_iso_code) %>%
+  mutate(total = n()) %>%
+  group_by(language_iso_code, label) %>%
+  summarise(total = n() / total) %>% 
+  ungroup() %>%
+  distinct() %>%
+  left_join(languages, by = "language_iso_code") %>%
+  left_join(country_info, by = "language_iso_code") %>%
+  mutate(
+    lang_country = glue(
+      "<span style=font-size:11pt; color:grey20>**{language}**</span><br><span style=color:grey30>{countries}</span>"),
+    label = factor(label, levels = c("negative", "neutral", "positive")),
+    region = factor(region, levels = c(
+      "North Africa",
+      "East Africa",
+      "Southeastern Africa",
+      "West Africa")
+    )
+  )
+
+factor_levels <-
+  df %>%
+  filter(label == "positive") %>%
+  arrange(total) %>%
+  pull(lang_country)
+
+df %<>%
+  mutate(
+    lang_country = factor(lang_country, levels = factor_levels)
+  )
+```
+
+# Bar Plot
+
+This code creates a bar chart to visualize the proportion of African Language tweets with positive, neutral, and negative sentiment. The bar chart is made using ggplot and is set up with aesthetics, scales, and themes, as well as labels, captions, and guides. Finally, it saves the plot as both a .svg and .png file.
+
+```{r, fig.showtext=TRUE}
+# Show color palette
+#scales::show_col(pal_npg("nrc")(3))
+
+plot <-
+  ggplot(data = df, aes(x = total, y = lang_country, fill = label)) +
+  geom_col() +
+  scale_fill_npg() +
+  facet_col(~region, scales = "free" ,space = "free") +
+  scale_x_continuous(
+    expand = c(0, 0),
+    labels = scales::percent) +
+  
+  theme_minimal(base_family = "Roboto Condensed") +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.major.x = element_line(size = 0.5, linetype = "solid", color = "grey65"),
+    
+    axis.text.y = element_markdown(),
+    plot.caption = element_markdown(),
+    plot.title = element_markdown(),
+    plot.subtitle = element_markdown(),
+    strip.text = element_text(face = "bold", hjust = 0, color = "grey10", size = 14),
+    
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    legend.position = "bottom",
+    panel.spacing = unit(1, "lines"),
+    
+    plot.background = element_rect(fill = "#FBE8C7", colour = "#FBE8C7"),
+    plot.margin = margin(20,30,20,30)
+  ) +
+  
+  guides(
+    fill = guide_legend(reverse = TRUE)
+  ) +
+  
+  labs(
+    title = "<span style=font-size:26pt>**African Language Sentiment Analysis**</span>",
+    subtitle = "<span style=font-size:14pt>The proportion of African Language tweets with 
+    <span style=color:#00A087FF>positive</span>,
+    <span style=color:#4DBBD5FF> neutral</span>, and
+    <span style=color:#E64B35FF> negative</span> sentiment.</span>",
+    x = NULL,
+    y = NULL,
+    fill = NULL,
+    caption = "Source: <b>AfriSenti: Sentiment Analysis dataset for 14 African languages</b> | Graphic by <b>Rahim Jutha</b>"
+  ) -> plot
+
+ggsave(
+    plot = plot, filename = "african_language_sentiment.svg",
+    width = 8, height = 9.5, units = "in"
+)
+
+ggsave(plot = plot, filename = "african_language_sentiment.png",
+    width = 8, height = 9.5, units = "in")
+```
