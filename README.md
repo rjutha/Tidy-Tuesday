@@ -4,4 +4,4 @@ Click on header or the chart for the code.
 
 ## [01-10-2023-Project-FeederWatch](https://github.com/rjutha/Tidy-Tuesday/tree/main/scripts/01-10-2023-Project-FeederWatch/eda_model.Rmd)
 
-![bc_birds](https://raw.githubusercontent.com/rjutha/Tidy-Tuesday/tree/main/scripts/01-10-2023-Project-FeederWatch/bc_birds.png)
+<img src='scripts/01-10-2023-Project-FeederWatch/bc_birds.png'/></a>
