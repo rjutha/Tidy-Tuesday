@@ -1,0 +1,125 @@
+---
+title: "Canadian Refugees 2022"
+format: html
+editor: visual
+---
+
+```{r}
+setwd(here::here())
+library(tidyverse)
+library(waffle)
+library(ggtext)
+library(scales)
+sysfonts::font_add_google("Source Sans Pro")
+```
+
+```{r}
+camcorder::gg_record(
+  dir = 'img',
+  width = 5,
+  height = 4,
+  units = 'in',
+  bg = '#FFD700'
+)
+```
+
+```{r}
+raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-22/population.csv') %>% 
+  janitor::clean_names() %>%
+  filter(
+    year == 2022,
+  ) %>%
+  select(coo_name, coo_iso,
+         coa_name, coa_iso,
+         refugees, asylum_seekers)
+```
+
+```{r}
+global_total <-
+  raw_data %>%
+  pull(refugees) %>% 
+  sum()
+
+ukr_total <-
+  raw_data %>%
+  filter(coo_iso == 'UKR') %>%
+  pull(refugees) %>% 
+  sum()
+```
+
+
+
+```{r}
+plot_data <- raw_data %>%
+  group_by(coo_iso) %>%
+  summarise(
+    total = sum(refugees)
+  ) %>%
+  ungroup() %>%
+  arrange(-total) %>%
+  mutate(
+    percent_all_refugees = 
+      floor(total / sum(total) * 100) 
+  )%>%
+  slice_head(n = 3) %>%
+  select(coo_iso, percent_all_refugees)
+```
+
+
+```{r}
+color_palette <- c('grey80', '#0057B7') 
+plot_data %>% 
+  filter(
+    coo_iso == 'UKR'
+  ) %>%
+  add_row(
+    coo_iso = 'blank',
+    percent_all_refugees = 100 - .$percent_all_refugees) %>%
+  mutate(
+    coo_iso = factor(coo_iso)
+  ) %>%
+  ggplot(aes(fill = coo_iso, values = percent_all_refugees)) +
+  geom_waffle(n_rows = 10, size = 0.5, colour = "white", flip = TRUE,
+              na.rm = TRUE, guide = FALSE) +
+  coord_equal(clip = 'off') +
+  scale_fill_manual(values = color_palette) + 
+  labs(
+    fill = NULL,
+    colour = NULL,
+    title = '**Ukraine**',
+    caption = paste(comma(ukr_total), 'Refugees')) +
+  theme_minimal(
+    base_size = 14,
+    base_family = 'Source Sans Pro'
+  ) +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.text.x = element_blank(),
+    line = element_blank(),
+    legend.position = 'none',
+    plot.title.position = 'plot',
+    plot.title = element_markdown(
+      size = 14, color = color_palette[2], lineheight = 1.25,
+      margin = margin(l = 0.5, b = -0.6, unit = 'cm')
+    ),
+    plot.subtitle = element_blank(),
+    plot.caption.position = 'plot',
+    plot.caption = element_text(
+      size = 14, hjust = 0.1, 
+      face = 'bold', color = color_palette[2],
+      margin = margin(t = -0.3, l = 0, b = 0, unit = 'cm')
+  ),
+  plot.margin = margin(t = 0.25, r = 0, l = -2, b = 0.25, unit = 'cm')
+) +
+  annotate(
+    'text',
+    x = 11,
+    y = 5.5,
+    label = str_wrap('In 2022, 19 out of every 100 Refugees were from Ukraine', 10),
+    lineheight = 1,
+    size = 4,
+    hjust = 0,
+    fontface = 'bold'
+  )
+```

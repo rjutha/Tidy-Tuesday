@@ -1,0 +1,133 @@
+---
+title: "Refugees Visualization"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-22/population.csv') %>% 
+  janitor::clean_names()
+```
+
+```{r}
+raw_data %>%
+  filter(year== 2022) %>%
+  group_by(coo_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 10) %>%
+  mutate(
+    coo_iso = factor(coo_iso, levels= coo_iso )
+  ) %>%
+  ggplot(aes(x = total, y = coo_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(year== 2022) %>%
+  group_by(coa_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 10) %>%
+  mutate(
+    coa_iso = factor(coa_iso, levels= coa_iso )
+  ) %>%
+  ggplot(aes(x = total, y = coa_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(
+    year == 2022,
+    coo_iso == 'SYR') %>%
+  group_by(coa_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 15) %>%
+  mutate(
+    coa_iso = factor(coa_iso, levels= coa_iso )
+  ) %>%
+  ggplot(aes(x = total, y = coa_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(
+    year == 2022,
+    coo_iso == 'UKR') %>%
+  group_by(coa_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 15) %>%
+  mutate(
+    coa_iso = factor(coa_iso, levels= coa_iso )
+  ) %>%
+  ggplot(aes(x = total, y = coa_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(
+    year == 2022,
+    coo_iso == 'AFG') %>%
+  group_by(coa_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 15) %>%
+  mutate(
+    coa_iso = factor(coa_iso, levels= coa_iso )
+  ) %>%
+  ggplot(aes(x = total, y = coa_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(
+    year == 2022,
+    coa_iso == 'CAN') %>%
+  group_by(coo_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 15) %>%
+  mutate(
+    coo_iso = factor(coo_iso, levels= coo_iso )
+  )
+
+
+
+  ggplot(aes(x = total, y = coo_iso)) +
+  theme_minimal() +
+  geom_col()
+```
+
+```{r}
+raw_data %>%
+  filter(
+    year == 2022,
+    coa_iso == 'CAN') %>%
+  group_by(coo_iso) %>%
+  summarise(total = sum(asylum_seekers)) %>%
+  arrange(-total) %>%
+  slice_head(n = 15) %>%
+  mutate(
+    coo_iso = factor(coo_iso, levels= coo_iso )
+  )
+```
+
+first plot: difference between refugees and asylum seekres how many of each did canada take some anotations as to why they are taken eg. mexico -\> people escaping cartel eg. ukraine -\> ukraine refugee crisis
+
+second plot: from 2022, UKR, AFG, and SYR are by far the most refugee answer where they are going using ribbon/ alluvial plot
