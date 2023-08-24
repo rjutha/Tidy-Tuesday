@@ -28,4 +28,4 @@ With this visualization I practiced using the annotate function to add more info
 
 Feel free to contact me with any comments 
 
-![line_plot](rjutha/Tidy-Tuesday/tree/main/scripts/2023-08-22-Refugees/final.png)
+![line_plot](final.png)
