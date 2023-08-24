@@ -1,0 +1,173 @@
+---
+title: "Refugee Line Chart"
+format: html
+editor: visual
+---
+
+```{r}
+setwd(here::here())
+library(tidyverse)
+library(waffle)
+library(ggtext)
+library(scales)
+sysfonts::font_add_google("Source Sans Pro")
+```
+
+```{r}
+camcorder::gg_record(
+  dir = 'img',
+  width = 6,
+  height = 4,
+  units = 'in',
+  bg = 'white'
+)
+```
+
+```{r}
+raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-22/population.csv') %>% 
+  janitor::clean_names()
+```
+
+```{r}
+top10_2022 <- raw_data %>%
+  filter(year== 2022) %>%
+  group_by(coo_iso) %>%
+  summarise(total = sum(refugees)) %>%
+  arrange(-total) %>%
+  slice_head(n = 3)
+
+percent_top3 <- 
+  raw_data %>%
+  filter(year == 2022) %>%
+  group_by(coo_iso) %>%
+  summarise(
+    total = sum(refugees)
+  ) %>%
+  ungroup() %>%
+  arrange(-total) %>%
+  mutate(
+    percent_all_refugees = 
+      total / sum(total) * 100
+  )%>%
+  slice_head(n = 3) %>%
+   pull(percent_all_refugees) %>%
+   sum() %>%
+   floor()
+
+global_total <-
+  raw_data %>%
+  filter(year == 2022) %>%
+  pull(refugees) %>% 
+  sum() %>%
+  comma()
+```
+
+```{r}
+# plot_data <- raw_data %>%
+#   select(
+#     coo_iso,
+#     refugees,
+#     year
+#   ) %>%
+#   filter(year %in% 2010:2022) %>%
+#   group_by(coo_iso, year) %>%
+#   summarise(refugees = sum(refugees)) %>%
+#   ungroup() %>%
+#   filter(coo_iso %in% (top10_2022 %>% pull(coo_iso)))
+```
+
+```{r}
+plot_data <- raw_data %>%
+  select(
+    coo_iso,
+    refugees,
+    year
+  ) %>%
+  filter(year %in% 2010:2022) %>%
+  group_by(coo_iso, year) %>%
+  summarise(refugees = sum(refugees)) %>%
+  ungroup()
+```
+
+```{r}
+color_palette <- c('SYR' = '#C81026', 'UKR' = '#0058B5', 'AFG' = '#017C50')
+title <- glue::glue(
+  'The countries <span style = "color:{color_palette[1]}">**Syria**</span>, <span style = "color:{color_palette[2]}">**Ukraine**</span>, and <span style = "color:{color_palette[3]}">**Afghanistan**</span> made up<br> **{percent_top3}%** of all **{global_total}** refugees in 2022'
+  )
+
+SYR_caption = '*The ongoing Syrian refugee crisis began in March 2011 as result of a violent government crackdown on anti-government graffiti.*'
+UKR_caption = "*The Ukraine refugee crisis began in late February 2022 after Russia's invasion of Ukraine.*"
+AFG_caption = "*Events leading to the Taliban's capture of Kabul in August 2021 occurred within Afghanistan's long history of conflict, contributing to a surge in the number of refugees.*"
+
+caption <- "Visualization by Rahim Jutha<br>Data source: *{refugees}* R package"
+
+plot_data %>%
+  ggplot(aes(x = year, y = refugees)) +
+  geom_line(aes(color = coo_iso)) +
+  scale_x_continuous(breaks = seq(2010,2022,2)) +
+  scale_y_continuous(label = comma_format()) +
+  scale_color_manual(values = color_palette, na.value = scales::alpha('grey25', alpha = 0.1)) +
+  labs(
+    title = title,
+    caption = caption,
+    x = '',
+    y = ''
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_minimal(
+    base_family = 'Source Sans Pro'
+  ) +
+  theme(
+    plot.title.position = 'plot',
+    plot.title = element_markdown(lineheight = 1.2),
+    plot.caption = element_markdown(lineheight = 1.2, hjust = 2, halign = 0),
+    legend.position = 'none',
+    panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_line(linetype = 'dashed'),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.margin = margin(t = 0.5, r = 4.25, b = 0.5, l = 0.5, unit = 'cm')
+  ) +
+  annotate(
+    "richtext",
+    x = 2022.5,
+    y = 6547818,
+    label = str_replace_all(str_wrap(SYR_caption,30), "\n", "<br>"),
+    hjust = 0,
+    size = 3,
+    color = color_palette[1],
+    label.size = NA
+  ) +
+    annotate(
+    "richtext",
+    x = 2022.5,
+    y = 4250000,
+    label = str_replace_all(str_wrap(UKR_caption,30), "\n", "<br>"),
+    hjust = 0,
+    size = 3,
+    color = color_palette[2],
+    label.size = NA
+  ) +
+    annotate(
+    "richtext",
+    x = 2022.5,
+    y = 1500000,
+    label = str_replace_all(str_wrap(AFG_caption,30), "\n", "<br>"),
+    hjust = 0,
+    size = 3,
+    color = color_palette[3],
+    label.size = NA
+  )
+
+  
+```
+
+```{r}
+camcorder::gg_playback(
+  name = file.path('plot.gif'),
+  first_image_duration = 5,
+  last_image_duration = 15,
+  frame_duration = .4,
+  image_resize = 800
+)
+```

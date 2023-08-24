@@ -79,7 +79,7 @@ plot_data %>%
     coo_iso = factor(coo_iso)
   ) %>%
   ggplot(aes(fill = coo_iso, values = percent_all_refugees)) +
-  geom_waffle(n_rows = 10, size = 0.5, colour = "white", flip = TRUE,
+  geom_waffle(n_rows = 10, size = 0.75, colour = "white", flip = TRUE,
               na.rm = TRUE, guide = FALSE) +
   coord_equal(clip = 'off') +
   scale_fill_manual(values = color_palette) + 
