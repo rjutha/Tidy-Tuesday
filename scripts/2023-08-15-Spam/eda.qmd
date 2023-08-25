@@ -1,0 +1,81 @@
+---
+title: "eda"
+format: html
+editor: visual
+---
+
+## Load Packages
+
+```{r}
+library(tidyverse)
+```
+
+## Load Data
+
+```{r}
+raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-15/spam.csv') %>%
+  janitor::clean_names()
+```
+
+```{r}
+raw_data %>%
+  glimpse()
+```
+
+## Plot of the distribution of all variables
+
+```{r}
+plot_data <- raw_data %>%
+  pivot_longer(cols = 1:6, names_to = 'variable', values_to = 'value') %>%
+  mutate(
+    yesno = case_when(
+      yesno == 'y' ~ 'Yes',
+      yesno == 'n' ~ 'No'
+    ),
+    description = case_when(
+      variable == 'crl_tot' ~ 'Total length of uninterrupted sequences of capitals',
+      variable == 'dollar' ~ 'Occurrences of the dollar sign, as percent of total number of characters',
+      variable == 'bang' ~ 'Occurrences of ‘!’, as percent of total number of characters',
+      variable == 'money' ~ 'Occurrences of ‘money’, as percent of total number of characters',
+      variable == 'n000' ~ 'Occurrences of the string ‘000’, as percent of total number of words',
+      variable == 'make' ~ 'Occurrences of ‘make’, as a percent of total number of words'
+    )
+  )
+```
+
+```{r}
+plot_data %>%
+  ggplot() +
+  geom_boxplot(aes(x = (value), y = yesno, fill = yesno)) +
+  facet_wrap(~description, scales = 'free') +
+  scale_x_log10()
+  theme_minimal()
+  
+  plot_data %>%
+  ggplot() +
+  geom_boxplot(aes(x = (value), y = yesno, fill = yesno)) +
+  facet_wrap(~description, scales = 'free') +
+  theme_minimal()
+```
+
+```{r}
+
+library(brms)
+mod_data <- raw_data %>%
+  mutate(
+    yesno = case_when(
+      yesno == 'y' ~ 1,
+      yesno == 'n' ~ 0,
+    )
+  )
+
+mod <- brm(yesno ~ ., data = mod_data)
+summary(mod)
+
+
+pred
+
+ggplot() +
+  geom_histogram(aes(x =pred), bins = 150) +
+  scale_x_continuous(limits = c(0,1), breaks = c(0,0.25,.5,.75,1))
+```
