@@ -1,0 +1,14 @@
+name: Spam
+title: Spam
+username:
+account: sway
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9684399
+bundleId: 7614151
+url: https://sway.shinyapps.io/Spam/
+quarto_version: 1.2.475
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: eda.qmd

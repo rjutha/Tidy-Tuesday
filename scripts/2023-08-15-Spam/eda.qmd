@@ -8,13 +8,14 @@ editor: visual
 
 ```{r}
 library(tidyverse)
+library(janitor)
 ```
 
 ## Load Data
 
 ```{r}
 raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-15/spam.csv') %>%
-  janitor::clean_names()
+  clean_names()
 ```
 
 ```{r}
@@ -59,8 +60,8 @@ plot_data %>%
 ```
 
 ```{r}
-
 library(brms)
+
 mod_data <- raw_data %>%
   mutate(
     yesno = case_when(
@@ -71,11 +72,43 @@ mod_data <- raw_data %>%
 
 mod <- brm(yesno ~ ., data = mod_data)
 summary(mod)
+```
 
+```{r}
+# https://archive.ics.uci.edu/dataset/94/spambase
+spam_text <- 'aaa'
 
-pred
+n_char <- str_length(spam_text)
+n_word <- str_count(spam_text, '[\\d\\w]+')
+
+# Total number of capital letters
+crl_tot <- str_count(spam_text, '[A-Z]')
+
+# All occurrences of $
+dollar <- str_count(spam_text, '\\$') / n_char * 100
+
+# all occurrences of !
+bang <- str_count(spam_text, '!') / n_char * 100
+
+# All occurrences of money (lowered to deal with cases like MoNeY)
+money <- str_count(str_to_lower(spam_text), 'money') / n_word * 100
+
+# All occurrences of 000
+n000 <- str_count(spam_text, '000') / n_word * 100
+
+# All occurences of make 
+make <- str_count(str_to_lower(spam_text), 'make') / n_word * 100
+```
+
+```{r}
+df_new_spam <- tibble(dollar = dollar, bang = bang, money = money, n000 = n000, make = make, crl_tot = crl_tot)
+
+pred <- posterior_predict(mod, newdata = df_new_spam)[,1]
+pred <- exp(pred)/(1+exp(pred))
 
 ggplot() +
   geom_histogram(aes(x =pred), bins = 150) +
-  scale_x_continuous(limits = c(0,1), breaks = c(0,0.25,.5,.75,1))
+  scale_x_continuous(breaks = c(0,0.25,.5,.75,1))
+
+mean(pred)
 ```

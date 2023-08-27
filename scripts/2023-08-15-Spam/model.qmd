@@ -1,0 +1,192 @@
+---
+title: "A Simple brms Model for predicting spam emails"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+server: shiny
+---
+
+## Introduction
+
+The point of making this document was to try out using quarto as an alternative to the standard rmarkdown file. I was also curious about the Rshiny integration that quarto has so I used the Tidy Tuesday data from 2023-08-15 to create an example. 
+
+## Load Libraries
+
+The R packages that I'll be using are tidyverse, janitor, and brms. The tidyverse will be used for general data manipulation as well as the stringr functions for string detection. Janitor is just for the clean_names function which is a game changer. Lastly the brms package is going to be used for a Bayesian Regression Model. Note that shiny does not need to be called for the integration with quarto to work.
+
+```{r}
+#| echo: true
+#| eval: false
+library(tidyverse)
+library(janitor)
+library(brms)
+```
+
+## Load Data
+
+The data is loaded straight from the tidy tuesday repository. The data is a subset of the original data which can be found [here]{https://archive.ics.uci.edu/dataset/94/spambase}. This subset contains 4601 records and only a handful of the full set of variables to model against.
+
+```{r}
+#| echo: true
+#| eval: false
+raw_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-08-15/spam.csv') %>%
+  clean_names()
+```
+
+## Run Model
+
+Here the data is transformed before creating the model. When the model is finished I save it to speed up the shinyapp so it doesn't have to build the model on start up.
+```{r}
+#| echo: true
+#| eval: false
+mod_data <- raw_data %>%
+  mutate(
+    yesno = case_when(
+      yesno == 'y' ~ 1,
+      yesno == 'n' ~ 0,
+    )
+  )
+
+mod <- brm(yesno ~ ., data = mod_data)
+summary(mod)
+
+saveRDS(mod, "model.rds")
+```
+
+## Spam Detection App
+
+Note that since I am only using a small subset of the data, the prediction are not the most reliable and I do not recommend basing any decisions on these results. The main purpose of this app was to create an interesting quarto document.
+
+```{r}
+#| echo: true
+textAreaInput(
+  "spam_text",
+  markdown("**Input text to be used by the model**"), 
+  value = 'thank you for your purchase through NORTON. this email that is to inform you your annual subscription with Norton is RENEWED.
+Here is an overview of your recent purchase :-
+PRODUCT INFO
+invoice no:- NYR7755269R
+ORDER date :- 09/09/2021
+PAYMENT method: - auto - debited
+VALUE :- $321.67
+to upgrade /cancel your subscription, PLEASE contact our customer service at
++1 (810)-(515)-(7954)
+Thank you,
+Norton billing support',
+  width = '100%',
+  rows = 6,
+  placeholder = 'Enter some text')
+
+plotOutput("posterior_prediction_plot")
+```
+
+```{r}
+#| echo: true
+#| context: server
+library(tidyverse)
+library(brms)
+mod <- read_rds('./model.rds')
+
+update_spam <- reactive({
+  spam_text <- input$spam_text
+  n_char <- str_length(spam_text)
+  n_word <- str_count(spam_text, '[\\d\\w]+')
+  crl_tot <- str_count(spam_text, '[A-Z]')
+  dollar <- str_count(spam_text, '\\$') / n_char * 100
+  bang <- str_count(spam_text, '!') / n_char * 100
+  money <- str_count(str_to_lower(spam_text), 'money') / n_word * 100
+  n000 <- str_count(spam_text, '000') / n_word * 100
+  make <- str_count(str_to_lower(spam_text), 'make') / n_word * 100
+  
+  df_new_spam <- tibble(
+    dollar = dollar, bang = bang, money = money,
+    n000 = n000, make = make, crl_tot = crl_tot)
+
+  pred <- posterior_predict(mod, newdata = df_new_spam)[,1]
+  pred <- exp(pred)/(1+exp(pred))
+  return(pred)
+})
+
+output$posterior_prediction_plot <- renderPlot({
+  pred <- update_spam()
+  pi_95 <- quantile(pred, probs = c(0.025, 0.975))
+  
+  ggplot() +
+    geom_histogram(aes(x =pred), bins = 150) +
+    scale_x_continuous(breaks = seq(0,1,0.25), limits = c(-0.05,1.05)) +
+    theme_minimal(
+      base_family = 'Source Sans Pro'
+    ) +
+    labs(
+      y = NULL,
+      x = 'Probability',
+      title = 'Posterior Prediction Interval for a new observation'
+    ) +
+    theme(
+      plot.title.position = 'plot',
+      plot.title = element_text(
+        size = 20,
+      ),
+      panel.grid =  element_blank(),
+      axis.text.y = element_blank()
+      
+    )
+})
+```
+
+##### Source code for the ShinyApp
+
+```{r}
+#| echo: true
+#| eval: false
+library(tidyverse)
+library(brms)
+mod <- read_rds('model.rds')
+
+update_spam <- reactive({
+  spam_text <- input$spam_text
+  n_char <- str_length(spam_text)
+  n_word <- str_count(spam_text, '[\\d\\w]+')
+  crl_tot <- str_count(spam_text, '[A-Z]')
+  dollar <- str_count(spam_text, '\\$') / n_char * 100
+  bang <- str_count(spam_text, '!') / n_char * 100
+  money <- str_count(str_to_lower(spam_text), 'money') / n_word * 100
+  n000 <- str_count(spam_text, '000') / n_word * 100
+  make <- str_count(str_to_lower(spam_text), 'make') / n_word * 100
+  
+  df_new_spam <- tibble(
+    dollar = dollar, bang = bang, money = money,
+    n000 = n000, make = make, crl_tot = crl_tot)
+
+  pred <- posterior_predict(mod, newdata = df_new_spam)[,1]
+  pred <- exp(pred)/(1+exp(pred))
+  return(pred)
+})
+
+output$posterior_prediction_plot <- renderPlot({
+  pred <- update_spam()
+  pi_95 <- quantile(pred, probs = c(0.025, 0.975))
+  
+  ggplot() +
+    geom_histogram(aes(x =pred), bins = 150) +
+    scale_x_continuous(breaks = seq(0,1,0.25), limits = c(-0.05,1.05)) +
+    theme_minimal() +
+    labs(
+      y = NULL,
+      x = 'Probability',
+      title = 'Posterior Prediction Interval for a new observation'
+    ) +
+    theme(
+      plot.title.position = 'plot',
+      plot.title = element_text(
+        size = 25,
+      ),
+      panel.grid =  element_blank(),
+      axis.text.y = element_blank()
+      
+    )
+})
+```
+
+The code above takes the users input and converts it into the variables that were used in the model. For example counting the amount of '!' are present in the text. It updates every time the text box is changed and plots a new Posterior Prediction Interval based on the results.
