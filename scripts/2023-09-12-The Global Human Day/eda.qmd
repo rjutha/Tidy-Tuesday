@@ -1,0 +1,38 @@
+---
+title: "Tidy Tuesday"
+format: html
+editor: visual
+---
+
+### Load Data
+
+used pc and clustering to find out which countries are similar
+since its less work lets jsut look at the main categories
+
+```{r}
+all_countries <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-09-12/all_countries.csv') %>%
+  janitor::clean_names()
+  
+
+
+# country_regions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-09-12/country_regions.csv')
+# global_human_day <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-09-12/global_human_day.csv')
+# global_economic_activity <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-09-12/global_economic_activity.csv')
+```
+
+```{r}
+df <- all_countries %>%
+  select(-subcategory, -uncertainty_combined, -region_code) %>%
+  group_by(country_iso3, category, population) %>%
+  summarize(hours_per_day_combined = sum(hours_per_day_combined)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = category, values_from = hours_per_day_combined) %>%
+  janitor::clean_names() %>%
+  column_to_rownames(var = "country_iso3")
+```
+
+```{r}
+df %>%
+ggplot(aes(x = technosphere_modification)) +
+  geom_boxplot()
+```
