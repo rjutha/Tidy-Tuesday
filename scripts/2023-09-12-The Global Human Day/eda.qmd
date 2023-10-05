@@ -36,3 +36,28 @@ df %>%
 ggplot(aes(x = technosphere_modification)) +
   geom_boxplot()
 ```
+
+
+```{r}
+sapply(df, function(x) scale(x, scale=FALSE)) -> x
+kmeans(df, 10)
+
+PCA(df) -> x
+ind <- x$ind$coord
+unlist(ind) -> y
+plot(y[,1:2])
+```
+
+```{r}
+set.seed(2356)
+
+km_fit <- iris %>% 
+  select(where(is.numeric)) %>%
+  kmeans(centers = 3, nstart = 1)
+
+km_fit %>%
+  broom::augment(iris) %>%
+  ggplot() +
+  aes(x = Sepal.Length, Sepal.Width) +
+  geom_point(aes(color = .cluster, shape = Species))
+```
